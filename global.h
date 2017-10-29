@@ -25,34 +25,34 @@
 #ifndef _SM3D_GLOBAL_H_
 #define _SM3D_GLOBAL_H_
 
-#define TILE_DIR "./"
+#define TILE_DIR "./maps"
 
 /**
  * @brief the size of a tile in pixels
  */
-#define TILE_SIZE (150.0)
+#define TILE_SIZE (128.0)
 
 /**
  * @brief holds the state of the window's width and height
  */
 struct s_window_state {
-    /**
-     * @brief width of the window
-     */
-    int width;
-    /**
-     * @brief height of the window
-     */
-    int height;
+  /**
+   * @brief width of the window
+   */
+  int width;
+  /**
+   * @brief height of the window
+   */
+  int height;
 };
 
 /**
  * @brief hold the players current position
  */
 struct s_player_state {
-    double latitude = 50.356718;
-    double longitude = 7.599485;
-    int zoom = 16;
+  double latitude = 49.891402;
+  double longitude = 2.302303;
+  int zoom = 16;
 };
 
 extern struct s_window_state window_state;

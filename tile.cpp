@@ -27,6 +27,7 @@
 
 #include "tile.h"
 #include "loader.h"
+#include "global.h"
 
 Tile::Tile(int zoom, int x, int y, GLuint texid) : zoom(zoom), x(x), y(y), texid(texid) {
 }
@@ -91,6 +92,21 @@ double latsize(double lat, int z) {
     // TODO this needs optimization but seems to work for now
     int tile = lat2tiley(lat, z);
     return (tiley2lat(tile, z) - tiley2lat(tile + 1, z)) / 2;
+}
+
+int long2x(int base, double lng, int z) {
+  int tx = long2tilex(lng, z);
+  double tl1 = tilex2long(tx, z);
+  double tl2 = tilex2long(tx + 1, z);
+
+  return (int)round((tx - base + (lng - tl1) / (tl2 - tl1)) * 256);
+}
+
+int lat2y(int base, double clat, double lat, int z) {
+  double tl1 = tiley2lat(base, z);
+  double tl2 = tiley2lat(base + 1, z);
+
+  return (int)round(((lat - clat) / (tl2 - tl1)) * 256);
 }
 
 Tile* TileFactory::get_tile(int zoom, double latitude, double longitude) {

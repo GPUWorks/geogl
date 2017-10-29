@@ -56,6 +56,10 @@ extern double tilex2long(int x, int z);
 
 extern double tiley2lat(int y, int z);
 
+extern int long2x(int base, double lng, int z);
+
+extern int lat2y(int base, double clat, double lat, int z) ;
+
 /**
  * Determines the longitude size of a tile at given zoom
  */

@@ -47,13 +47,13 @@ double angle(int p1x, int p1y, int p2x, int p2y) {
 }
 
 void handle_mouse_motion(SDL_MouseMotionEvent &motion) {
-    if (input_state.left_mouse_down) {
-        viewport_state.angle_rotate = angle(motion.x, motion.y, (window_state.width / 2), (window_state.height / 2)) - start_angle_rotate;
-    }
+    //if (input_state.left_mouse_down) {
+    //    viewport_state.angle_rotate = angle(motion.x, motion.y, (window_state.width / 2), (window_state.height / 2)) - start_angle_rotate;
+    //}
     if (input_state.right_mouse_down) {
         viewport_state.angle_tilt = std::max((window_state.height / 2) - motion.y, 0) * MAX_TILT / (window_state.height / 2);
     }
-    if (input_state.middle_mouse_down) {
+    if (input_state.left_mouse_down) {
         long double _cos = std::cos(viewport_state.angle_rotate * M_PI / 180);
         long double _sin = std::sin(viewport_state.angle_rotate * M_PI / 180);
         player_state.latitude += (latsize(player_state.latitude, player_state.zoom)/TILE_SIZE) * (motion.yrel * _cos + motion.xrel * _sin) / std::cos(viewport_state.angle_tilt * M_PI / 180);
