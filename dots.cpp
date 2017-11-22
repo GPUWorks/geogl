@@ -8,6 +8,8 @@
 #include <string>
 
 #include "dots.h"
+#include "tile.h"
+#include "time.h"
 
 class CSVRow
 {
@@ -50,43 +52,76 @@ std::istream& operator>>(std::istream& str, CSVRow& data)
     return str;
 }
 
+bool operator<(Point o1, Point o2) {
+	return o1.lng < o2.lng || (o1.lng == o2.lng && o1.lat < o2.lat);
+}
+
+bool operator==(Point o1, Point o2) {
+	return o1.lng == o2.lng && o1.lat == o2.lat;
+}
+
 void Dots::run() {
+	time_start = get_time();
+
 	std::thread t([this]() {
 		std::ifstream       file("data.csv");
 
-		CSVRow              row;
-		int base = 0;
+		uint64_t base = 0;
+		CSVRow row;
 		while(file >> row)
 		{
-			int ts = std::stoull(row[1]);
-			double lat = std::stod(row[2]);
-			double lng = std::stod(row[3]);
+			uint64_t ts = std::stoull(row[1]);
+			double lng = std::stod(row[2]);
+			double lat = std::stod(row[3]);
 
-			dots[dots.size()] = Dot{lat, lng, 0};
+			Point point{lng, lat};
+			auto item = dots.find(point);
+			if (item != dots.end()) {
+				item->second.size++;
+			} else {
+				dots[point] = make_dot(lng, lat, ts);
+			}
 
-			if (base > 0) {
-				//usleep((ts - base) / 10000);
+			if (time_base > 0) {
+				usleep((ts - base) / (1000 * speed));
+			} else {
+				time_base = ts;
 			}
 
 			base = ts;
 		}
-
-		/*double min_lat =  -4.647451;
-		double max_lat = 7.380453;
-		double min_lng = 42.857748;
-		double max_lng = 50.737176;
-
-		for (int i = 0; i < 80000; i++) {
-			double lat = (double)(rand()) / RAND_MAX * (max_lat - min_lat) + min_lat;
-			double lng = (double)(rand()) / RAND_MAX * (max_lng - min_lng) + min_lng;
-
-			dots[dots.size()] = Dot{lat, lng, 0};
-
-			if (dots.size() % 1000 == 0) {
-				printf("%d items\n", dots.size());
-			}
-		}*/
 	});
 
 	t.detach();
+}
+
+Dot Dots::make_dot(double lng, double lat, uint64_t seen_at) {
+	Dot dot = Dot{lng, lat, seen_at, 1, {}, {}};
+
+	for (int i = MIN_ZOOM; i <= MAX_ZOOM; i++) {
+		int map_size = mapsize(i);
+		dot.zoom_x[i] = long2x(lng, map_size);
+		dot.zoom_y[i] = lat2y(lat, map_size);
+	}
+
+	return dot;
+}
+
+uint64_t Dots::time_diff(uint64_t seen_at, uint64_t current) {
+	if (seen_at < time_base) {
+		return 0;
+	}
+
+	if (current < time_start) {
+		return 0;
+	}
+
+	uint64_t be = seen_at - time_base;
+	uint64_t ce = (current - time_start) / speed;
+
+	if (ce < be) {
+		return 0;
+	}
+
+	return ce - be;
 }

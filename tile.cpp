@@ -94,19 +94,18 @@ double latsize(double lat, int z) {
     return (tiley2lat(tile, z) - tiley2lat(tile + 1, z)) / 2;
 }
 
-int long2x(int base, double lng, int z) {
-  int tx = long2tilex(lng, z);
-  double tl1 = tilex2long(tx, z);
-  double tl2 = tilex2long(tx + 1, z);
-
-  return (int)round((tx - base + (lng - tl1) / (tl2 - tl1)) * 256);
+int mapsize(int z) {
+  return pow(2, z) * 256;
 }
 
-int lat2y(int base, double clat, double lat, int z) {
-  double tl1 = tiley2lat(base, z);
-  double tl2 = tiley2lat(base + 1, z);
+int long2x(double lng, int map_size) {
+  return (int)((lng + 180.0) * (map_size / 360.0));
+}
 
-  return (int)round(((lat - clat) / (tl2 - tl1)) * 256);
+int lat2y(double lat, int map_size) {
+  double latRad = lat * M_PI / 180.0;
+  double mercN = log(tan((M_PI / 4.0) + (latRad / 2.0)));
+  return (int)((map_size / 2.0) - (map_size * mercN / (2.0 * M_PI)));
 }
 
 Tile* TileFactory::get_tile(int zoom, double latitude, double longitude) {

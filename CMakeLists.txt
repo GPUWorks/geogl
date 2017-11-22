@@ -21,6 +21,10 @@ include_directories(${SDL2_IMAGE_INCLUDE_DIR})
 find_package(OpenGL REQUIRED)
 include_directories(${OPENGL_INCLUDE_DIR})
 
+# Glut
+find_package(GLUT REQUIRED)
+include_directories(${GL_INCLUDE_DIR})
+
 # CURL
 find_package(CURL REQUIRED)
 include_directories(${CURL_INCLUDE_DIR})
@@ -32,4 +36,4 @@ include_directories(${Boost_INCLUDE_DIRS})
 # All source files from the current directory will be used
 aux_source_directory(. SRC_LIST)
 add_executable(${PROJECT_NAME} ${SRC_LIST})
-target_link_libraries(${PROJECT_NAME} ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY} ${OPENGL_gl_LIBRARY} ${CURL_LIBRARY} ${Boost_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY} ${OPENGL_gl_LIBRARY} ${CURL_LIBRARY} ${Boost_LIBRARIES} ${GLUT_LIBRARY})

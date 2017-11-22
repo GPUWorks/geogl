@@ -50,9 +50,9 @@ struct s_window_state {
  * @brief hold the players current position
  */
 struct s_player_state {
-  double latitude = 49.891402;
-  double longitude = 2.302303;
-  int zoom = 16;
+  double latitude = 46.634100;
+  double longitude = 2.560975;
+  int zoom = 6;
 };
 
 extern struct s_window_state window_state;

@@ -30,6 +30,9 @@
 
 #include <GL/gl.h>
 
+const int MIN_ZOOM = 1;
+const int MAX_ZOOM = 18;
+
 /**
  * @brief storage class for a tile
  */
@@ -56,9 +59,11 @@ extern double tilex2long(int x, int z);
 
 extern double tiley2lat(int y, int z);
 
-extern int long2x(int base, double lng, int z);
+extern int mapsize(int z);
 
-extern int lat2y(int base, double clat, double lat, int z) ;
+extern int long2x(double lng, int map_size);
+
+extern int lat2y(double lat, int map_size);
 
 /**
  * Determines the longitude size of a tile at given zoom

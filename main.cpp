@@ -32,12 +32,14 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+#include <GL/glut.h>
 
 #include "tile.h"
 #include "loader.h"
 #include "input.h"
 #include "global.h"
 #include "dots.h"
+#include "time.h"
 
 
 /**
@@ -83,7 +85,7 @@ bool poll() {
     return true;
 }
 
-void DrawCircle(float cx, float cy, float r, int num_segments)
+void draw_circle(float cx, float cy, float r, int num_segments)
 {
 	float theta = 2 * 3.1415926 / float(num_segments);
 	float c = cosf(theta);//precalculate the sine and cosine
@@ -106,6 +108,16 @@ void DrawCircle(float cx, float cy, float r, int num_segments)
 	glEnd();
 }
 
+void draw_text(std::string string, int x, int y, int z)
+{
+    const char *c;
+    glRasterPos3f(x, y,z);
+
+    for (c = string.c_str(); *c != '\0'; c++) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18 , *c);
+    }
+}
+
 void render(int zoom, double latitude, double longitude, Dots* dots) {
     Tile* center_tile = TileFactory::instance()->get_tile(zoom, latitude, longitude);
 
@@ -120,80 +132,102 @@ void render(int zoom, double latitude, double longitude, Dots* dots) {
     glLoadIdentity();
     glOrtho(-(window_state.width / 2), (window_state.width / 2), (window_state.height / 2), -(window_state.height / 2), -1000, 1000);
 
-    // Rotate and and tilt the world geometry
-    glRotated(viewport_state.angle_tilt, 1.0, 0.0, 0.0);
-    glRotated(viewport_state.angle_rotate, 0.0, 0.0, -1.0);
+    glPushMatrix();
+        // Rotate and and tilt the world geometry
+        glRotated(viewport_state.angle_tilt, 1.0, 0.0, 0.0);
+        glRotated(viewport_state.angle_rotate, 0.0, 0.0, -1.0);
 
-    // Render the slippy map parts
-    glEnable(GL_TEXTURE_2D);
+        int map_size = mapsize(zoom);
 
-        glPushMatrix();
+        int center_tile_x = long2x(tilex2long(center_tile->x, zoom), map_size);
+        int center_tile_y = lat2y(tiley2lat(center_tile->y, zoom), map_size);
+        int ref_x = long2x(longitude, map_size);
+        int ref_y = lat2y(latitude, map_size);
 
-            static const int top = -4;
-            static const int left = -4;
-            static const int bottom = 5;
-            static const int right = 5;
+        glTranslated(center_tile_x - ref_x, center_tile_y - ref_y, 0);
 
-            // Start 'left' and 'top' tiles from the center tile and render down to 'bottom' and
-            // 'right' tiles from the center tile
-            Tile* current = center_tile->get(left, top);
-            for (int y = top; y < bottom; y++) {
-                for (int x = left; x < right; x++) {
+        // Render the slippy map parts
+        glEnable(GL_TEXTURE_2D);
 
-                    // If the texid is set to zero the download was finished successfully and
-                    // the tile can be rendered now properly
-                    if (current->texid == 0) {
-                        Loader::instance()->open_image(*current);
+            glPushMatrix();
+
+                static const int top = -4;
+                static const int left = -4;
+                static const int bottom = 5;
+                static const int right = 5;
+
+                // Start 'left' and 'top' tiles from the center tile and render down to 'bottom' and
+                // 'right' tiles from the center tile
+                Tile* current = center_tile->get(left, top);
+                for (int y = top; y < bottom; y++) {
+                    for (int x = left; x < right; x++) {
+
+                        // If the texid is set to zero the download was finished successfully and
+                        // the tile can be rendered now properly
+                        if (current->texid == 0) {
+                            Loader::instance()->open_image(*current);
+                        }
+
+                        // Render the tile itself at the correct position
+                        glPushMatrix();
+                            glTranslated(x*128*2, y*128*2, 0);
+                            glBindTexture(GL_TEXTURE_2D, current->texid);
+                            glBegin(GL_QUADS);
+                                glTexCoord2f(0.0, 1.0); glVertex3f(0, 256, 0);
+                                glTexCoord2f(1.0, 1.0); glVertex3f(256, 256, 0);
+                                glTexCoord2f(1.0, 0.0); glVertex3f(256, 0, 0);
+                                glTexCoord2f(0.0, 0.0); glVertex3f(0, 0, 0);
+                            glEnd();
+                        glPopMatrix();
+                        current = current->get_west();
                     }
-
-                    // Render the tile itself at the correct position
-                    glPushMatrix();
-                        glTranslated(x*128*2, y*128*2, 0);
-                        glBindTexture(GL_TEXTURE_2D, current->texid);
-                        glBegin(GL_QUADS);
-                            glTexCoord2f(0.0, 1.0); glVertex3f(0, 256, 0);
-                            glTexCoord2f(1.0, 1.0); glVertex3f(256, 256, 0);
-                            glTexCoord2f(1.0, 0.0); glVertex3f(256, 0, 0);
-                            glTexCoord2f(0.0, 0.0); glVertex3f(0, 0, 0);
-                        glEnd();
-                    glPopMatrix();
-                    current = current->get_west();
+                    current = current->get(-(std::abs(left) + std::abs(right)), 1);
                 }
-                current = current->get(-(std::abs(left) + std::abs(right)), 1);
+            glPopMatrix();
+        glDisable(GL_TEXTURE_2D);
+
+        glColor4d(1.0, 193.0 / 255.0, 7.0 / 255.0, 0.3);
+
+        double base_size = pow(2, zoom) / 50.0;
+
+        int min_x = -(window_state.width);
+        int max_x =  (window_state.width);
+        int min_y = -(window_state.height);
+        int max_y =  (window_state.height);
+
+        uint64_t time = get_time();
+        uint64_t msec = 1000000;
+
+        for (auto const &di : dots->dots) {
+            Dot dot = di.second;
+            int x = dot.zoom_x[zoom] - center_tile_x;
+            int y = dot.zoom_y[zoom] - center_tile_y;
+
+            if (x < min_x || x > max_x || y < min_y || y > max_y) {
+                continue;
             }
-        glPopMatrix();
-    glDisable(GL_TEXTURE_2D);
 
-    glColor4d(1.0, 193.0 / 255.0, 7.0 / 255.0, 0.3);
-    double tlat1 = tiley2lat(center_tile->y, zoom);
-    double tlat2 = tiley2lat(center_tile->y + 1, zoom);
-    double tlatd = (tlat2 - tlat1);
+            uint64_t time_diff = dots->time_diff(dot.seen_at, time);
 
-    double tlng1 = tilex2long(center_tile->x, zoom);
-    double tlng2 = tilex2long(center_tile->x + 1, zoom);
-    double tlngd = (tlng2 - tlng1);
+            double pulse_period = 1000 * msec / M_PI;
+            double pulse = (sin(time_diff / pulse_period) + 1) / 6;
 
-    double size = std::max(2.0, pow(2, zoom) / 2000.0);
+            double alpha = pulse + 0.2;
+            double size = std::max(2.0, log2(base_size * dot.size));
 
-    int min_x = -(window_state.width);
-    int max_x =  (window_state.width);
-    int min_y = -(window_state.height);
-    int max_y =  (window_state.height);
-
-    for (auto const &di : dots->dots) {
-        int x = (int)round(((di.second.lng - tlng1) / tlngd) * 256);
-        int y = (int)round(((di.second.lat - tlat1) / tlatd) * 256);
-
-        if (x < min_x || x > max_x || y < min_y || y > max_y) {
-            continue;
+            glColor4d(1.0, 193.0 / 255.0, 7.0 / 255.0, alpha);
+            draw_circle(x, y, size, std::max(20, (int)(size * 10)));
         }
+        glColor3d(1.0, 1.0, 1.0);
+    glPopMatrix();
 
-        DrawCircle(x, y, size, size * 4);
-    }
-    glColor3d(1.0, 1.0, 1.0);
+    glPushMatrix();
+        glTranslated(-(window_state.width / 2), -(window_state.height / 2), 0);
+        draw_text("Live " + std::to_string(dots->dots.size()), 20, 30, 0);
+    glPopMatrix();
 }
 
-int main() {
+int main(int argc, char *argv[]) {
 
     // Initialize SDL
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -210,6 +244,9 @@ int main() {
     }
     SDL_GetWindowSize(window, &window_state.width, &window_state.height);
     SDL_GLContext context = SDL_GL_CreateContext(window);
+    glutInit(&argc, argv);
+    glutInitWindowSize(640,480);
+    glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
 
     Dots* dot_manager = new Dots();
     dot_manager->run();
